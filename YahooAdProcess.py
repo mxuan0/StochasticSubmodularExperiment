@@ -2,7 +2,7 @@ import collections
 import pandas as pd
 import numpy as np
 import pdb
-def yahoo_ad_process(filename, edge_type='by_customer'):
+def yahoo_ad_process(filename, edge_type='by_total'):
     dtype = {
         'account_id':int,
         'phrase_id':int,
@@ -23,7 +23,12 @@ def yahoo_ad_process(filename, edge_type='by_customer'):
         for phrase_acct in list(pair_counts.keys()):
             edge_weights[phrase_acct] = pair_counts[phrase_acct] / customer_count[phrase_acct[1]]
             customer_to_phrase[phrase_acct[1]].append(phrase_acct[0])
-    
+    elif edge_type == 'by_total':
+        total_edges = len(list(pair_counts.keys()))
+        for phrase_acct in list(pair_counts.keys()):
+            edge_weights[phrase_acct] = pair_counts[phrase_acct] / total_edges
+            customer_to_phrase[phrase_acct[1]].append(phrase_acct[0])
+            
     return customer_to_phrase, edge_weights, df['price'].mean(), np.array(phrase_price)
 
 

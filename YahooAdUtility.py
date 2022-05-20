@@ -35,14 +35,14 @@ def total_influence(weight_per_advertiser, budget_per_advertiser, edge_prob, cus
     '''
     influence = 0
     gradient = np.zeros_like(budget_per_advertiser)
-    for i in tqdm(range(len(weight_per_advertiser))):
+    for i in range(len(weight_per_advertiser)):
         infl_, grad_ = influence_by_advertiser(budget_per_advertiser[i], edge_prob, customer_to_phrase)
         influence += weight_per_advertiser[i] * infl_
         gradient[i, :] = grad_
 
     return influence, gradient
     
-
+'''
 advertiser_num = 10
 phrase_num = 1001
 noise_scale = 0.1
@@ -54,3 +54,4 @@ fn = 'data/YahooAdBiddingData/ydata-ysm-advertiser-bids-v1_0.txt'
 customer_to_phrase, edge_weights, avp, phrase_price = yahoo_ad_process(fn)
 
 print(total_influence(weights, intial_budget, edge_weights, customer_to_phrase))
+'''

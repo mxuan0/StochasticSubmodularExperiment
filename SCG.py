@@ -1,18 +1,21 @@
 import cvxpy as cp
 import numpy as np
+from torch import solve
 from YahooAdUtility import total_influence
+from tqdm import tqdm
 
 class SCG:
-    def __init__(self, constraints) -> None:
-        self.constrants = constraints
+    def __init__(self, constraint_var, constraints) -> None:
+        self.constraint_var = constraint_var
+        self.constraints = constraints
 
     def project(self, momentum, constraints):
-        x = cp.Variable(shape=momentum.shape)
+        x = self.constraint_var
 
         objective = cp.Maximize(cp.scalar_product(x, momentum))
         
         prob = cp.Problem(objective, constraints)
-        prob.solve()
+        prob.solve(solver='OSQP')
         
         return x.value
 
@@ -28,30 +31,51 @@ class SCG:
         
         return x + 1/epoch * grad, new_momentum
 
-    def stochastic_continuous_greedy(self, epoch, weight_shape=(10, 1001)):
+    def stochastic_continuous_greedy(self, epoch, weight_shape):
         x = np.zeros(shape=weight_shape)
         momentum = np.zeros(shape=weight_shape)
 
         values = []
-        for e in range(epoch):
+        for e in tqdm(range(epoch)):
             p = 4 / (e+8)**(2/3)
             value, grad = self.compute_value_grad(x)
-            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, e)
+            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, epoch)
 
             values.append(value)
 
         return values 
 
 class SCG_Yahoo(SCG):
-    def __init__(self, constraints, edge_prob, customer_to_phrase, advertiser_weights) -> None:
-        super().__init__(constraints)
+    def __init__(self, constraint_var, constraints, edge_prob, customer_to_phrase, advertiser_weights) -> None:
+        super().__init__(constraint_var, constraints)
 
         self.edge_prob = edge_prob
         self.customer_to_phrase = customer_to_phrase
         self.advertiser_weights = advertiser_weights
 
-    def compute_value_grad(self, x):
-        influence, gradient = total_influence(self.advertiser_weights, x, self.edge_prob, self.customer_to_phrase)
-    
+    def compute_value_grad(self, x, noise_scale=0.1):
+        noise_scale = 0.1
+        noise = np.random.normal(scale=noise_scale, size=self.advertiser_weights.shape[0])
+
+        influence, gradient = total_influence(self.advertiser_weights+noise, x, self.edge_prob, self.customer_to_phrase)
+
         return influence, gradient
-#constraints = [0 <= x, x <= phrase_price, cp.sum(x) <= total_price]
+
+
+
+
+
+
+advertiser_num = 10
+phrase_num = 1001
+weight_shape = (advertiser_num, phrase_num)
+advertiser_weights = np.random.normal(loc=5, size=advertiser_num)
+from YahooAdProcess import yahoo_ad_process
+fn = 'data/YahooAdBiddingData/ydata-ysm-advertiser-bids-v1_0.txt'
+customer_to_phrase, edge_weights, avp, phrase_price = yahoo_ad_process(fn)
+
+x = cp.Variable(shape=phrase_num)
+constraints = [0 <= x, x <= np.array([0] + list(phrase_price)), cp.sum(x) <= avp]
+
+scg = SCG_Yahoo(x, constraints, edge_weights, customer_to_phrase, advertiser_weights)
+scg.stochastic_continuous_greedy(10, weight_shape)

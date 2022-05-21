@@ -9,11 +9,13 @@ def influence_on_customer(x, customer_id, edge_prob, connected_phrases):
     influence_ = 1
     for ph in connected_phrases:
         influence_ *= (1 - edge_prob[(ph,customer_id)]) ** x[ph]
+        if np.isnan((1 - edge_prob[(ph,customer_id)]) ** x[ph]):
+            pdb.set_trace()
     #pdb.set_trace()
     gradient = np.zeros_like(x)
     for ph in connected_phrases:
         gradient[ph] = - influence_ * x[ph] / (1 - edge_prob[(ph,customer_id)]) 
-
+        
     return 1 - influence_, gradient
 
 def influence_by_advertiser(x, edge_prob, customer_to_phrase):

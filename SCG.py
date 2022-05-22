@@ -15,7 +15,7 @@ class SCG:
         objective = cp.Maximize(cp.scalar_product(x, momentum))
         
         prob = cp.Problem(objective, constraints)
-        prob.solve(solver='OSQP')
+        prob.solve(solver='ECOS')
         
         return x.value
 
@@ -37,7 +37,7 @@ class SCG:
 
         values = []
         for e in tqdm(range(epoch)):
-            pdb.set_trace()
+            #pdb.set_trace()
             p = 4 / (e+8)**(2/3)
             value, grad = self.compute_value_grad(x)
             x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, epoch)
@@ -61,7 +61,24 @@ class SCG_Yahoo(SCG):
 
         return influence, gradient
 
-advertiser_num = 10
+
+class SCG_NQP(SCG):
+    def __init__(self, constraint_var, constraints, 
+                    H, A, h, u_bar) -> None:
+        super().__init__(constraint_var, constraints)
+        self.H, self.A, self.h, self.u_bar = H, A, h, u_bar
+        self.n = H.shape[1]
+        self.m = A.shape[0]
+        
+    def compute_value_grad(self, x, noise_scale=10):
+        noise = np.random.normal(scale=noise_scale, size=x.shape)
+        
+        value = 1/2*x @ self.H @ x.T + self.h.T @ x.T
+        gradient = self.H@x.T + self.h
+        
+        return value[0][0], gradient + noise
+
+'''advertiser_num = 10
 phrase_num = 1001
 weight_shape = (advertiser_num, phrase_num)
 advertiser_weights = np.random.normal(loc=5, size=advertiser_num)
@@ -74,7 +91,23 @@ constraints = [np.zeros_like(x) <= x, x <= np.array([0] + list(phrase_price)), c
 
 pdb.set_trace()
 scg = SCG_Yahoo(x, constraints, edge_weights, customer_to_phrase, advertiser_weights)
-values = scg.stochastic_continuous_greedy(50, weight_shape)
+values = scg.stochastic_continuous_greedy(50, weight_shape)'''
+
+n = 100
+m = 50
+b = 10
+u_bar = np.ones((1,n))
+H = np.random.uniform(-100, 0, (n, n))
+A = np.random.uniform(0, 1, (m, n))
+h = -1 * H.T @ u_bar.T
+train_iter = 50
+
+x = cp.Variable(shape=(1,n))
+constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
+
+scg = SCG_NQP(x, constraints, H, A, h, u_bar)
+values = scg.stochastic_continuous_greedy(10, (1,n))
+
 
 import matplotlib.pyplot as plt
 plt.figure()

@@ -30,7 +30,7 @@ def yahoo_ad_process(filename, edge_type='by_total'):
             edge_weights[phrase_acct] = pair_counts[phrase_acct] / total_edges
             customer_to_phrase[phrase_acct[1]].append(phrase_acct[0])
             
-    return customer_to_phrase, edge_weights, df['price'].mean(), np.array(phrase_price)
+    return customer_to_phrase, edge_weights, df['price'].max(), np.array(phrase_price)
 
 
 '''fn = 'data/YahooAdBiddingData/ydata-ysm-advertiser-bids-v1_0.txt'

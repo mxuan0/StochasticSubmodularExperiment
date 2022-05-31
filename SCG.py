@@ -32,7 +32,7 @@ class SCG:
         
         return x + 1/epoch * grad_projected, new_momentum
 
-    def stochastic_continuous_greedy(self, epoch, weight_shape):
+    def train(self, epoch, weight_shape):
         x = np.zeros(shape=weight_shape) + 1e-5
         momentum = np.zeros(shape=weight_shape)
 
@@ -85,33 +85,37 @@ weight_shape = (advertiser_num, phrase_num)
 advertiser_weights = np.random.normal(loc=5, size=advertiser_num)
 from YahooAdProcess import yahoo_ad_process
 fn = 'data/YahooAdBiddingData/ydata-ysm-advertiser-bids-v1_0.txt'
-customer_to_phrase, edge_weights, avp, phrase_price = yahoo_ad_process(fn)
+customer_to_phrase, edge_weights, max_price, phrase_price = yahoo_ad_process(fn)
 
 x = cp.Variable(shape=(phrase_num))
-constraints = [np.zeros_like(x) <= x, x <= np.array([0] + list(phrase_price)), cp.sum(x) <= avp]
+constraints = [np.zeros_like(x) <= x, x <= np.array([0] + list(phrase_price)), cp.sum(x) <= max_price]
 
 pdb.set_trace()
 scg = SCG_Yahoo(x, constraints, edge_weights, customer_to_phrase, advertiser_weights)
 values = scg.stochastic_continuous_greedy(50, weight_shape)'''
 
-n = 100
-m = 50
-b = 1
-u_bar = np.ones((1,n))
-H = np.random.uniform(-100, 0, (n, n))
-A = np.random.uniform(0, 1, (m, n))
-h = -1 * H.T @ u_bar.T
-train_iter = 100
+# n = 100
+# m = 50
+# b = 1
+# u_bar = np.ones((1,n))
+# H = np.random.uniform(-100, 0, (n, n))
+# A = np.random.uniform(0, 1, (m, n))
+# h = -1 * H.T @ u_bar.T
+# train_iter = 1000
 
-x = cp.Variable(shape=(1,n))
-constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
+# x = cp.Variable(shape=(1,n))
+# constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
 
-scg = SCG_NQP(x, constraints, H, A, h, u_bar)
-values = scg.stochastic_continuous_greedy(train_iter, (1,n))
+# scg = SCG_NQP(x, constraints, H, A, h, u_bar)
+# results = []
+# for i in tqdm(range(1)):
+#     value = scg.train(train_iter, (1,n))
+#     results.append(value)
 
+# np.save('Results/SCG_NQP_iter1000_b1_0.npy', np.array(results))
 
-import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(values)
-plt.show()
-plt.savefig('Plots/SCG_NQP_b%d.png' % b)
+# import matplotlib.pyplot as plt
+# plt.figure()
+# plt.plot(values)
+# plt.show()
+# plt.savefig('Plots/SCG_NQP_b%d.png' % b)

@@ -45,7 +45,7 @@ class monotoneDRsubmodularNQP:
         var = np.var(F_values, axis=0)
         mean = np.mean(F_values, axis=0)
 
-        fig, ax_left = plt.subplots(dpi=500)
+        fig, ax_left = plt.subplots(dpi=100)
         ax_right = ax_left.twinx()
 
         ax_left.plot(range(line.shape[0]), 
@@ -56,7 +56,7 @@ class monotoneDRsubmodularNQP:
         ax_left.set_ylabel('F-value Variance', fontsize=17)
         ax_left.set_xlabel('Iteration (t)\n(A)', fontsize=17)
         plt.show()
-
+        
     def project(self, x_infeasible, b):
         x = cp.Variable(shape=(self.n,1))
         objective = cp.Minimize(cp.sum_squares(x - x_infeasible))
@@ -122,8 +122,8 @@ class monotoneDRsubmodularNQP:
                     break
             Fs.append(l)
         return Fs       
-'''
-expr_num = 100
+
+expr_num = 1
 n = 100
 m = 50
 b = [1, 10]
@@ -136,5 +136,5 @@ train_iter = 50
 alphas = [1e-3]
 non_diag = ~np.eye(H.shape[0],dtype=bool)
 H_ = np.where(non_diag == True, H , np.random.rand()*100)
-'''
-
+nqp = monotoneDRsubmodularNQP(H,A,h,u_bar)
+nqp.plot_var_nn(1, 1e-4, 5, 50, 1)

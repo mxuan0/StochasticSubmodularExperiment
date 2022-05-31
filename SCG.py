@@ -95,21 +95,22 @@ values = scg.stochastic_continuous_greedy(50, weight_shape)'''
 
 n = 100
 m = 50
-b = 10
+b = 1
 u_bar = np.ones((1,n))
 H = np.random.uniform(-100, 0, (n, n))
 A = np.random.uniform(0, 1, (m, n))
 h = -1 * H.T @ u_bar.T
-train_iter = 50
+train_iter = 100
 
 x = cp.Variable(shape=(1,n))
 constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
 
 scg = SCG_NQP(x, constraints, H, A, h, u_bar)
-values = scg.stochastic_continuous_greedy(10, (1,n))
+values = scg.stochastic_continuous_greedy(train_iter, (1,n))
 
 
 import matplotlib.pyplot as plt
 plt.figure()
 plt.plot(values)
 plt.show()
+plt.savefig('Plots/SCG_NQP_b%d.png' % b)

@@ -122,7 +122,7 @@ class monotoneDRsubmodularNQP:
                     break
             Fs.append(l)
         return Fs       
-
+'''
 expr_num = 1
 n = 100
 m = 50
@@ -137,4 +137,4 @@ alphas = [1e-3]
 non_diag = ~np.eye(H.shape[0],dtype=bool)
 H_ = np.where(non_diag == True, H , np.random.rand()*100)
 nqp = monotoneDRsubmodularNQP(H,A,h,u_bar)
-nqp.plot_var_nn(1, 1e-4, 5, 50, 1)
+nqp.plot_var_nn(1, 1e-4, 5, 50, 1)'''

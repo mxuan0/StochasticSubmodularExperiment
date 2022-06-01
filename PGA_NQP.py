@@ -11,7 +11,7 @@ class PGA_NQP:
 
         self.setup_constraints()
 
-    def compute_value_grad(self, x, noise_scale=10):
+    def compute_value_grad(self, x, noise_scale=1000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         
         value = 1/2*x.T @ self.H @ x + self.h.T @ x
@@ -38,8 +38,10 @@ class PGA_NQP:
         x_t = x + alpha * grad
         return self.project(x_t)
 
-    def train(self, epoch, alpha):
+    def train(self, epoch, alpha, initialization=None):
         x = np.random.randn(self.n, 1)
+        if initialization is not None:
+            x = initialization
         x = self.project(x)    
 
         values = []
@@ -54,27 +56,29 @@ n = 100
 m = 50
 b = 1
 
+x = np.random.randn(n, 1)
+
 u_bar = np.ones((n,1))
 H = np.random.uniform(-100, 0, (n, n))
 A = np.random.uniform(0, 1, (m, n))
 h = -1 * H.T @ u_bar
 
 alpha = 1e-4
-train_iter = 100
+train_iter = 20
 run = 50
 
 results = []
 for _ in tqdm(range(run)):
     scg = PGA_NQP(H, A, h, u_bar, b)
-    values = scg.train(train_iter, alpha)
+    values = scg.train(train_iter, alpha, x)
     results.append(values[:])
 
 results = np.array(results)
 
 import matplotlib.pyplot as plt
 plt.figure()
-# plt.plot(results.min(axis=0))
-# plt.plot(results.max(axis=0))
-# plt.plot(results.mean(axis=0))
-plt.plot(results.var(axis=0))
+plt.plot(results.min(axis=0))
+plt.plot(results.max(axis=0))
+plt.plot(results.mean(axis=0))
+#plt.plot(results.var(axis=0))
 plt.show()

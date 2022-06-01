@@ -12,7 +12,14 @@ class SCG_NQP:
 
         self.setup_constraints()
 
-    def compute_value_grad(self, x, noise_scale=100):
+    def sanity_check(self, x):
+        if not (x < self.u_bar).all():
+            pdb.set_trace()
+        
+        if not (self.A @ x < b).all():
+            pdb.set_trace()
+
+    def compute_value_grad(self, x, noise_scale=20000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         
         value = 1/2*x.T @ self.H @ x + self.h.T @ x
@@ -54,40 +61,40 @@ class SCG_NQP:
             #p = 1 / (e)**(2/3)
             value, grad = self.compute_value_grad(x)
             momentum_grad_diff.append(np.sum(np.square(grad-momentum)))
-            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, (e+10*c)/c)
-            
+            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, (e+c)/1)
+            #self.sanity_check(x)
             values.append(value)
             
 
         return x, values, momentum_grad_diff
 
-# n = 100
-# m = 50
-# b = 1
+n = 100
+m = 50
+b = 1
 
-# u_bar = np.ones((n,1))
-# H = np.random.uniform(-100, 0, (n, n))
-# A = np.random.uniform(0, 1, (m, n))
-# h = -1 * H.T @ u_bar
+u_bar = np.ones((n,1))
+H = np.random.uniform(-100, 0, (n, n))
+A = np.random.uniform(0, 1, (m, n))
+h = -1 * H.T @ u_bar
 
-# run = 11
-# train_iter = 1000
+run = 50
+train_iter = 20
 
-# for c in range(1, 102, 10):
-#     results = []
-#     for _ in tqdm(range(run)):
-#         scg = SCG_NQP(H, A, h, u_bar, b)
-#         x, values, momentum_grad_diff = scg.train(train_iter, c)
-#         pdb.set_trace()
-#         results.append(values[:])
+for c in range(train_iter//2, train_iter, train_iter//10):
+    results = []
+    for _ in tqdm(range(run)):
+        scg = SCG_NQP(H, A, h, u_bar, b)
+        x, values, momentum_grad_diff = scg.train(train_iter, c)
+        #pdb.set_trace()
+        results.append(values[:])
 
-#     results = np.array(results)
+    results = np.array(results)
 
-#     import matplotlib.pyplot as plt
-#     plt.figure()
-#     plt.plot(results.min(axis=0))
-#     plt.plot(results.max(axis=0))
-#     plt.plot(results.mean(axis=0)[:])
-#     #plt.plot(results.var(axis=0))
-#     #plt.show()
-#     plt.savefig('Plots/SCG_NQP_b1_c%d_10.png' % c)
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.plot(results.min(axis=0))
+    plt.plot(results.max(axis=0))
+    plt.plot(results.mean(axis=0)[:])
+    #plt.plot(results.var(axis=0))
+    #plt.show()
+    plt.savefig('Plots/SCG_NQP_b1_c%d_noise20000.png' % c)

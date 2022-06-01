@@ -1,11 +1,9 @@
 import cvxpy as cp
 import numpy as np
 import pdb
-from YahooAdUtility import total_influence
 from tqdm import tqdm
-from copy import deepcopy
 
-class SCG_NQP:
+class PGA_NQP:
     def __init__(self, H, A, h, u_bar, b) -> None:
         self.H, self.A, self.h, self.u_bar, self.b = H, A, h, u_bar, b
         self.n = H.shape[1]
@@ -13,7 +11,7 @@ class SCG_NQP:
 
         self.setup_constraints()
 
-    def compute_value_grad(self, x, noise_scale=100):
+    def compute_value_grad(self, x, noise_scale=10):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         
         value = 1/2*x.T @ self.H @ x + self.h.T @ x
@@ -26,35 +24,30 @@ class SCG_NQP:
         self.p = cp.Parameter(shape=(self.n, 1))
 
         constraints = [0 <= self.x, self.x <= self.u_bar, self.A @ self.x <= self.b]
-        objective = cp.Maximize(self.x.T @ self.p)
+        objective = cp.Minimize(cp.sum_squares(self.x - self.p))
 
         self.prob = cp.Problem(objective, constraints)
 
-    def project(self, momentum):
-        self.p.value = momentum
+    def project(self, x_t):
+        self.p.value = x_t
         self.prob.solve(solver='ECOS')
         
         return self.x.value
 
-    def stochastic_continuous_greedy_step(self, x, grad, p, momentum, epoch):
-        new_momentum = (1-p) * momentum + p * grad        
-        grad_projected= self.project(new_momentum)
-        
-        return x + 1/epoch * grad_projected, new_momentum
+    def projected_gradient_ascent_step(self, x, grad, alpha):
+        x_t = x + alpha * grad
+        return self.project(x_t)
 
-    def train(self, epoch):
-        x = np.zeros(shape=(self.n,1))
-        momentum = np.zeros(shape=(self.n,1))
+    def train(self, epoch, alpha):
+        x = np.random.randn(self.n, 1)
+        x = self.project(x)    
 
         values = []
-        for e in range(epoch):
-            #pdb.set_trace()
-            p = 4 / (e+8)**(2/3)
-            value, grad = self.compute_value_grad(x)
-            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, e+1)
+        for i in range(epoch):
+            value, gradient = self.compute_value_grad(x)
+            x = self.projected_gradient_ascent_step(x, gradient, alpha/(i+1))
 
             values.append(value)
-
         return values 
 
 n = 100
@@ -66,22 +59,22 @@ H = np.random.uniform(-100, 0, (n, n))
 A = np.random.uniform(0, 1, (m, n))
 h = -1 * H.T @ u_bar
 
-run = 1
-train_iter = 10000
+alpha = 1e-4
+train_iter = 100
+run = 50
 
 results = []
 for _ in tqdm(range(run)):
-    scg = SCG_NQP(H, A, h, u_bar, b)
-    values = scg.train(train_iter)
+    scg = PGA_NQP(H, A, h, u_bar, b)
+    values = scg.train(train_iter, alpha)
     results.append(values[:])
 
 results = np.array(results)
 
 import matplotlib.pyplot as plt
 plt.figure()
-plt.plot(results.min(axis=0))
+# plt.plot(results.min(axis=0))
 # plt.plot(results.max(axis=0))
 # plt.plot(results.mean(axis=0))
 plt.plot(results.var(axis=0))
 plt.show()
-plt.savefig('Plots/SCG_NQP_b%d.png' % b)

@@ -19,7 +19,7 @@ class SCG_NQP:
         if not (self.A @ x < b).all():
             pdb.set_trace()
 
-    def compute_value_grad(self, x, noise_scale=20000):
+    def compute_value_grad(self, x, noise_scale=2000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         
         value = 1/2*x.T @ self.H @ x + self.h.T @ x
@@ -61,7 +61,7 @@ class SCG_NQP:
             #p = 1 / (e)**(2/3)
             value, grad = self.compute_value_grad(x)
             momentum_grad_diff.append(np.sum(np.square(grad-momentum)))
-            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, (e+c)/1)
+            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, epoch)#(e+c)/1)
             #self.sanity_check(x)
             values.append(value)
             
@@ -80,21 +80,42 @@ h = -1 * H.T @ u_bar
 run = 50
 train_iter = 20
 
-for c in range(train_iter//2, train_iter, train_iter//10):
-    results = []
-    for _ in tqdm(range(run)):
-        scg = SCG_NQP(H, A, h, u_bar, b)
-        x, values, momentum_grad_diff = scg.train(train_iter, c)
-        #pdb.set_trace()
-        results.append(values[:])
+# for c in range(5, 51, 5):
+#     results = []
+#     for _ in tqdm(range(run)):
+#         scg = SCG_NQP(H, A, h, u_bar, b)
+#         x, values, momentum_grad_diff = scg.train(train_iter, c)
+#         #pdb.set_trace()
+#         results.append(values[:])
 
-    results = np.array(results)
+#     results = np.array(results)
 
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.plot(results.min(axis=0))
-    plt.plot(results.max(axis=0))
-    plt.plot(results.mean(axis=0)[:])
-    #plt.plot(results.var(axis=0))
-    #plt.show()
-    plt.savefig('Plots/SCG_NQP_b1_c%d_noise20000.png' % c)
+#     import matplotlib.pyplot as plt
+#     plt.figure()
+#     plt.plot(results.min(axis=0))
+#     plt.plot(results.max(axis=0))
+#     plt.plot(results.mean(axis=0)[:])
+#     #plt.plot(results.var(axis=0))
+#     #plt.show()
+#     plt.savefig('Plots/SCG_NQP_b1_c%d_noise20000_const.png' % c)
+
+iter_values = []
+scg = SCG_NQP(H, A, h, u_bar, b)
+try:
+    for c in range(5, 200, 10):
+        last_values = []
+        for _ in tqdm(range(run)):
+            x, values, momentum_grad_diff = scg.train(c, c)
+            #pdb.set_trace()
+            last_values.append(values[-1])
+
+        iter_values.append((last_values, c))
+except cp.error.SolverError as e:
+    print(e)
+import matplotlib.pyplot as plt
+plt.figure()
+for last_values_, c_ in iter_values:
+    plt.scatter([c_ for _ in range(run)], last_values_, c='blue')
+
+
+plt.savefig('scg_dist_noise2000.png')

@@ -11,7 +11,7 @@ class PGA_NQP:
 
         self.setup_constraints()
 
-    def compute_value_grad(self, x, noise_scale=1000):
+    def compute_value_grad(self, x, noise_scale=2000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         
         value = 1/2*x.T @ self.H @ x + self.h.T @ x
@@ -47,38 +47,59 @@ class PGA_NQP:
         values = []
         for i in range(epoch):
             value, gradient = self.compute_value_grad(x)
-            x = self.projected_gradient_ascent_step(x, gradient, alpha/(i+1))
+            x = self.projected_gradient_ascent_step(x, gradient, alpha)
 
             values.append(value)
         return values 
 
-n = 100
-m = 50
-b = 1
+# n = 100
+# m = 50
+# b = 1
 
-x = np.random.randn(n, 1)
+# x = np.random.randn(n, 1)
 
-u_bar = np.ones((n,1))
-H = np.random.uniform(-100, 0, (n, n))
-A = np.random.uniform(0, 1, (m, n))
-h = -1 * H.T @ u_bar
+# u_bar = np.ones((n,1))
+# H = np.random.uniform(-50, 0, (n, n))
+# H = H + H.T
+# A = np.random.uniform(0, 1, (m, n))
+# h = -1 * H.T @ u_bar
 
-alpha = 1e-4
-train_iter = 20
-run = 50
+# alpha = 1e-4
+# train_iter = 20
+# run = 50
 
-results = []
-for _ in tqdm(range(run)):
-    scg = PGA_NQP(H, A, h, u_bar, b)
-    values = scg.train(train_iter, alpha, x)
-    results.append(values[:])
+# results = []
+# for _ in tqdm(range(run)):
+#     scg = PGA_NQP(H, A, h, u_bar, b)
+#     values = scg.train(train_iter, alpha, x)
+#     results.append(values[:])
 
-results = np.array(results)
+# results = np.array(results)
 
-import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(results.min(axis=0))
-plt.plot(results.max(axis=0))
-plt.plot(results.mean(axis=0))
-#plt.plot(results.var(axis=0))
-plt.show()
+# import matplotlib.pyplot as plt
+# plt.figure()
+# plt.plot(results.min(axis=0))
+# plt.plot(results.max(axis=0))
+# plt.plot(results.mean(axis=0))
+# #plt.plot(results.var(axis=0))
+# plt.show()
+
+# iter_values = []
+# pga = PGA_NQP(H, A, h, u_bar, b)
+# try:
+#     for c in range(5, 200, 10):
+#         last_values = []
+#         for _ in tqdm(range(run)):
+#             values = pga.train(c, alpha, initialization=x)
+#             #pdb.set_trace()
+#             last_values.append(sum(values[:])/c)
+
+#         iter_values.append((last_values, c))
+# except cp.error.SolverError as e:
+#     print(e)
+# import matplotlib.pyplot as plt
+# plt.figure()
+# for last_values_, c_ in iter_values:
+#     plt.scatter([c_ for _ in range(run)], last_values_, c='blue')
+
+# plt.savefig('pga_dist_noise2000.png')

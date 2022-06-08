@@ -38,7 +38,7 @@ class PGA_NQP:
         x_t = x + alpha * grad
         return self.project(x_t)
 
-    def train(self, epoch, alpha, initialization=None):
+    def train(self, epoch, alpha, initialization=None, noise_scale=2000):
         x = np.random.randn(self.n, 1)
         if initialization is not None:
             x = initialization
@@ -46,7 +46,7 @@ class PGA_NQP:
 
         values = []
         for i in range(epoch):
-            value, gradient = self.compute_value_grad(x)
+            value, gradient = self.compute_value_grad(x, noise_scale)
             x = self.projected_gradient_ascent_step(x, gradient, alpha)
 
             values.append(value)

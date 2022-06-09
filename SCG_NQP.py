@@ -48,7 +48,7 @@ class SCG_NQP:
         
         return x + 1/epoch * grad_projected, new_momentum
 
-    def train(self, epoch, noise_scale=2000):
+    def train(self, epoch, noise_scale=2000, step_coef=0.15):
         x = np.zeros(shape=(self.n,1))
         momentum = np.zeros(shape=(self.n,1))
 
@@ -60,7 +60,7 @@ class SCG_NQP:
             #p = 1 / (e)**(2/3)
             value, grad = self.compute_value_grad(x, noise_scale)
             momentum_grad_diff.append(np.sum(np.square(grad-momentum)))
-            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, (e+1)/0.17)#(e+c)/1)
+            x, momentum = self.stochastic_continuous_greedy_step(x, grad, p, momentum, (e+1)/step_coef)#(e+c)/1)
             #self.sanity_check(x)
             values.append(value)
             

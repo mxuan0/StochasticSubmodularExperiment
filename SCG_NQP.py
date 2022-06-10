@@ -67,15 +67,19 @@ class SCG_NQP:
 
         return x, values, momentum_grad_diff
 
-# n = 100
-# m = 50
-# b = 1
+n = 100
+m = 50
+b = 1
 
-# u_bar = np.ones((n,1))
-# H = np.random.uniform(-100, 0, (n, n))
-# A = np.random.uniform(0, 1, (m, n))
-# h = -1 * H.T @ u_bar
+u_bar = np.ones((n,1))
+H = np.random.uniform(-100, 0, (n, n))
+A = np.random.uniform(0, 1, (m, n))
+h = -1 * H.T @ u_bar
 
+iter_values = []
+scg = SCG_NQP(H, A, h, u_bar, b)
+x, values, momentum_grad_diff = scg.train(500, noise_scale=10000, step_coef=0.17)
+print(values)
 # run = 50
 # train_iter = 20
 

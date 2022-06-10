@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 import cvxpy as cp
 import numpy as np
 import pdb, pickle
@@ -23,7 +14,7 @@ class PGA_Yahoo:
     def compute_value_grad(self, x, noise_scale=2000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         infl, gradient = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
-        print(np.abs(gradient).max())
+        #print(np.abs(gradient).max())
         return infl, gradient + noise
 
     def setup_constraints(self):
@@ -48,7 +39,8 @@ class PGA_Yahoo:
     def train(self, epoch, alpha, initialization=None, noise_scale=2000):
         values = []
         for ad in range(self.num_advertiser):
-            x = np.random.randn(self.num_phrase)
+            #x = np.random.randn(self.num_phrase)
+            x = np.zeros(self.num_phrase)+1e-5
             if initialization is not None:
                 x = initialization
             x = self.project(x)    
@@ -65,14 +57,25 @@ class PGA_Yahoo:
         values = np.array(values).sum(axis=0)
         return values 
 
-with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
-    customer_to_phrase = pickle.load(inp)
-    edge_weights = pickle.load(inp)
-    avp = pickle.load(inp)
-    phrase_price = pickle.load(inp)
+# with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
+#     customer_to_phrase = pickle.load(inp)
+#     edge_weights = pickle.load(inp)
+#     avp = pickle.load(inp)
+#     phrase_price = pickle.load(inp)
+# result = []
+# num_advertiser, num_phrase = 1, 1000
+# noise = 500
 
-num_advertiser, num_phrase = 1, 1000
-noise = 100
-pga = PGA_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
-values = pga.train(50, 1e-4, noise_scale=noise)
-pdb.set_trace()
+# pga = PGA_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
+# for _ in range(1):
+#     values = pga.train(200, 1e-3, noise_scale=noise)
+#     result.append(values)
+# result = np.array(result)
+# import matplotlib.pyplot as plt
+# plt.figure()
+# step = np.tile(np.arange(200)+1, (len(result),1))
+# result = np.cumsum(result, axis=1)/step
+# plt.plot(result.min(axis=0))
+# plt.plot(result.mean(axis=0))
+# plt.plot(result.max(axis=0))
+# plt.show()

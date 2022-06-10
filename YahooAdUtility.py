@@ -14,9 +14,9 @@ def influence_on_customer(x, customer_id, edge_prob, connected_phrases):
     #pdb.set_trace()
     gradient = np.zeros_like(x)
     for ph in connected_phrases:
-        gradient[ph] = - influence_ * x[ph] / (1 - edge_prob[(ph,customer_id)]) 
+        gradient[ph] = influence_ * x[ph] / (1 - edge_prob[(ph,customer_id)]) 
         
-    return 1 - influence_, gradient
+    return 1 - influence_, -gradient
 
 def influence_by_advertiser(x, edge_prob, customer_to_phrase):
     #assert((x >= np.zeros_like(x)).all() and (x[1:] <= budget_limit_phrase).all())

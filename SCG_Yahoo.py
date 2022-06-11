@@ -58,7 +58,7 @@ class SCG_Yahoo:
             for e in tqdm(range(epoch)):
                 p = 4 / (e+8)**(2/3)
                 value, gradient = self.compute_value_grad(x, noise_scale)
-                x, momentum = self.stochastic_continuous_greedy_step(x, gradient, p, momentum, epoch)
+                x, momentum = self.stochastic_continuous_greedy_step(x, gradient, p, momentum, (e+1)/step_coef)
                 self.sanity_check(x)
                 values_per_ad.append(value)
 
@@ -67,27 +67,27 @@ class SCG_Yahoo:
         values = np.array(values).sum(axis=0)
         return values 
 
-# with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
-#     customer_to_phrase = pickle.load(inp)
-#     edge_weights = pickle.load(inp)
-#     avp = pickle.load(inp)
-#     phrase_price = pickle.load(inp)
-# result = []
-# num_advertiser, num_phrase = 1, 1000
-# noise = 500
-# step_coef = 0.29
-# scg = SCG_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
-# for _ in range(10):
-#     values = scg.train(200,noise_scale=noise, step_coef=step_coef)
-#     result.append(values)
-# result = np.array(result)
+with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
+    customer_to_phrase = pickle.load(inp)
+    edge_weights = pickle.load(inp)
+    avp = pickle.load(inp)
+    phrase_price = pickle.load(inp)
+result = []
+num_advertiser, num_phrase = 1, 1000
+noise = 500
+step_coef = 0.15
+scg = SCG_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
+for _ in range(10):
+    values = scg.train(200,noise_scale=noise, step_coef=step_coef)
+    result.append(values)
+result = np.array(result)
 
-# import matplotlib.pyplot as plt
-# plt.figure()
-# plt.plot(result.min(axis=0))
-# plt.plot(result.mean(axis=0))
-# plt.plot(result.max(axis=0))
-# plt.show()
+import matplotlib.pyplot as plt
+plt.figure()
+plt.plot(result.min(axis=0))
+plt.plot(result.mean(axis=0))
+plt.plot(result.max(axis=0))
+plt.show()
 
 
 

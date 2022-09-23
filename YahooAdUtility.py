@@ -13,10 +13,15 @@ def influence_on_customer(x, customer_id, edge_prob, connected_phrases):
             pdb.set_trace()
     #pdb.set_trace()
     gradient = np.zeros_like(x)
-    for ph in connected_phrases:
-        gradient[ph] = influence_ * x[ph] / (1 - edge_prob[(ph,customer_id)]) 
-        
-    return 1 - influence_, -gradient
+    log_prob = np.zeros((x.shape[0], 1))
+    hessian = np.zeros((x.shape[0], x.shape[0]))
+    for phrase in connected_phrases:
+        log_prob[phrase] = np.log(1 - edge_prob[(phrase,customer_id)])
+
+        # gradient[ph1] = - influence_ * np.log(1 - edge_prob[(ph1,customer_id)])
+        # for ph2 in connected_phrases:
+        #     hessian[ph1][ph2] = gradient[ph1] * np.log(1 - edge_prob[(ph2,customer_id)])
+    return 1 - influence_, - influence_ * log_prob.squeeze(), - influence_ * log_prob @ log_prob.T
 
 def influence_by_advertiser(x, edge_prob, customer_to_phrase):
     #assert((x >= np.zeros_like(x)).all() and (x[1:] <= budget_limit_phrase).all())
@@ -24,11 +29,14 @@ def influence_by_advertiser(x, edge_prob, customer_to_phrase):
 
     influence = 0
     gradient = np.zeros_like(x)
+    hessian = np.zeros((x.shape[0], x.shape[0]))
+
     for customer in customer_to_phrase:
-        infl_, grad_ = influence_on_customer(x, customer, edge_prob, customer_to_phrase[customer])
+        infl_, grad_, hessian_ = influence_on_customer(x, customer, edge_prob, customer_to_phrase[customer])
         influence += infl_
         gradient += grad_
-    return influence, gradient
+        hessian += hessian_
+    return influence, gradient, hessian
 
 def total_influence(weight_per_advertiser, budget_per_advertiser, edge_prob, customer_to_phrase):
     '''

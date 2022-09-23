@@ -13,7 +13,7 @@ class PGA_Yahoo:
 
     def compute_value_grad(self, x, noise_scale=2000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
-        infl, gradient = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
+        infl, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
         #print(np.abs(gradient).max())
         return infl, gradient + noise
 

@@ -11,15 +11,9 @@ class SCG_Yahoo:
         self.edge_prob, self.c_to_ph = edge_prob, c_to_ph
         self.setup_constraints()
 
-    
-    
-    
-    
-    
-    
     def compute_value_grad(self, x, noise_scale=2000):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
-        infl, gradient = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
+        infl, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
         #print(np.abs(gradient).max())
         return infl, gradient + noise
 
@@ -65,7 +59,7 @@ class SCG_Yahoo:
             values.append(values_per_ad)
 
         values = np.array(values).sum(axis=0)
-        return values 
+        return values
 
 with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
     customer_to_phrase = pickle.load(inp)
@@ -78,9 +72,10 @@ noise = 500
 step_coef = 0.15
 scg = SCG_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
 for _ in range(10):
-    values = scg.train(200,noise_scale=noise, step_coef=step_coef)
+    values = scg.train(200, noise_scale=noise, step_coef=step_coef)
     result.append(values)
 result = np.array(result)
+
 
 import matplotlib.pyplot as plt
 plt.figure()
@@ -89,6 +84,7 @@ plt.plot(result.mean(axis=0))
 plt.plot(result.max(axis=0))
 plt.show()
 
+np.save('Results/scg_yahoo_noise500_epoch200_run10.npy', result)
 
 
 

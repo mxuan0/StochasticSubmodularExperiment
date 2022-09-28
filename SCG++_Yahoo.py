@@ -26,10 +26,10 @@ class SCGPP_Yahoo:
             noise = np.random.normal(scale=noise_scale, size=(self.num_phrase, self.batch_size0))\
                 .mean(axis=1)
 
-            influence, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
+            influence, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph, use_hessian=True)
             gradient = gradient + noise
         else:
-            influence, _, hessian = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
+            influence, _, hessian = influence_by_advertiser(x, self.edge_prob, self.c_to_ph, use_hessian=True)
             gradient = self.grad_prev + hessian @ (x - self.x_prev)
 
         return influence, gradient
@@ -60,7 +60,7 @@ class SCGPP_Yahoo:
             values_per_ad = []
             for e in tqdm(range(epoch)):
                 value, gradient = self.compute_value_grad(x, e, noise_scale)
-                x = self.stochastic_continuous_greedy_step(x, gradient,  epoch) #(e+1)/step_coef)
+                x = self.stochastic_continuous_greedy_step(x, gradient, epoch) #(e+1)/step_coef)
                 self.sanity_check(x)
                 values_per_ad.append(value)
 

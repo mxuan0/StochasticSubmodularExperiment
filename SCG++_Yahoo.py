@@ -73,32 +73,32 @@ class SCGPP_Yahoo:
         values = np.array(values).sum(axis=0)
         return values
 
-with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
-    customer_to_phrase = pickle.load(inp)
-    edge_weights = pickle.load(inp)
-    avp = pickle.load(inp)
-    phrase_price = pickle.load(inp)
-
-result = []
-num_advertiser, num_phrase = 1, 1000
-noise = 500
-step_coef = 0.15
-batch_size0 = 10
-batch_size = 10
-
-scg = SCGPP_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase, batch_size0, batch_size)
-for _ in range(1):
-    values = scg.train(200, noise_scale=noise, step_coef=step_coef)
-    result.append(values)
-result = np.array(result)
-
-
-import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(result.min(axis=0))
-plt.plot(result.mean(axis=0))
-plt.plot(result.max(axis=0))
-plt.show()
+# with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
+#     customer_to_phrase = pickle.load(inp)
+#     edge_weights = pickle.load(inp)
+#     avp = pickle.load(inp)
+#     phrase_price = pickle.load(inp)
+#
+# result = []
+# num_advertiser, num_phrase = 1, 1000
+# noise = 500
+# step_coef = 0.15
+# batch_size0 = 10
+# batch_size = 10
+#
+# scg = SCGPP_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase, batch_size0, batch_size)
+# for _ in range(1):
+#     values = scg.train(200, noise_scale=noise, step_coef=step_coef)
+#     result.append(values)
+# result = np.array(result)
+#
+#
+# import matplotlib.pyplot as plt
+# plt.figure()
+# plt.plot(result.min(axis=0))
+# plt.plot(result.mean(axis=0))
+# plt.plot(result.max(axis=0))
+# plt.show()
 # run = 50
 # train_iter = 20
 

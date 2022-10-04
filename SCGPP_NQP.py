@@ -62,10 +62,12 @@ class SCGPP_NQP:
             if e > 0:
                 self.x_prev = x
             self.grad_prev = grad
-            # self.sanity_check(x)
-            values.append(value)
 
+            values.append(value)
+        # self.sanity_check(x)
         return x, values
+
+
 
 
 n = 100
@@ -80,10 +82,20 @@ h = -1 * H.T @ u_bar
 batch_size0 = 10
 batch_size = 10
 
-iter_values = []
+
+runs = 500
+noise = 5000
+epoch = 500
+result = []
 scg = SCGPP_NQP(H, A, h, u_bar, b, batch_size0, batch_size)
-x, values = scg.train(1000, noise_scale=10000, step_coef=0.17)
-print(values)
+
+for _ in tqdm(range(runs)):
+    x, values = scg.train(epoch, noise_scale=noise, step_coef=0.1)
+    result.append(values)
+
+np.save('Results/scgpp_nqp_noise%d_epoch%d_run%d_fixedstep.npy' % (noise, epoch, runs), result)
+
+
 # run = 50
 # train_iter = 20
 

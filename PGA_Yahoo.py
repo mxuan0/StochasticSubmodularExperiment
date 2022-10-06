@@ -57,25 +57,24 @@ class PGA_Yahoo:
         values = np.array(values).sum(axis=0)
         return values 
 
-# with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
-#     customer_to_phrase = pickle.load(inp)
-#     edge_weights = pickle.load(inp)
-#     avp = pickle.load(inp)
-#     phrase_price = pickle.load(inp)
-# result = []
-# num_advertiser, num_phrase = 1, 1000
-# noise = 500
+# open processed Yahoo data
+with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
+    customer_to_phrase = pickle.load(inp)
+    edge_weights = pickle.load(inp)
+    avp = pickle.load(inp)
+    phrase_price = pickle.load(inp)
 
-# pga = PGA_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
-# for _ in range(1):
-#     values = pga.train(200, 1e-3, noise_scale=noise)
-#     result.append(values)
-# result = np.array(result)
-# import matplotlib.pyplot as plt
-# plt.figure()
-# step = np.tile(np.arange(200)+1, (len(result),1))
-# result = np.cumsum(result, axis=1)/step
-# plt.plot(result.min(axis=0))
-# plt.plot(result.mean(axis=0))
-# plt.plot(result.max(axis=0))
-# plt.show()
+# define training parameters
+runs = 2
+result = []
+num_advertiser, num_phrase = 1, 1000
+noise = 1000
+epoch = 500
+
+pga = PGA_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
+for _ in range(runs):
+    values = pga.train(epoch, 1e-3, noise_scale=noise)
+    result.append(values)
+result = np.array(result)
+
+np.save('Results/pga_yahoo_noise%d_epoch%d_run%d.npy' % (noise, epoch, runs), result)

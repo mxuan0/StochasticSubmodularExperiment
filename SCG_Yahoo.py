@@ -18,7 +18,7 @@ class SCG_Yahoo:
         return infl, gradient + noise
 
     def sanity_check(self, x):
-        if not (x < self.u_bar).all():
+        if not (np.abs((x - self.u_bar)[x > self.u_bar]) < 1e-5).all():
             pdb.set_trace()
 
     def setup_constraints(self):
@@ -42,55 +42,48 @@ class SCG_Yahoo:
         
         return x + 1/epoch * grad_projected, new_momentum
 
-    def train(self, epoch, noise_scale=2000, step_coef=0.1):
+    def train(self, epoch, noise_scale=2000):
         values = []   
         for ad in range(self.num_advertiser):
             momentum = np.zeros(self.num_phrase)
-            x = np.zeros(self.num_phrase)+1e-5
-
-            values_per_ad = []
-            for e in tqdm(range(epoch)):
+            x = np.zeros(self.num_phrase)
+            value = 0
+            for e in range(epoch):
                 p = 4 / (e+8)**(2/3)
                 value, gradient = self.compute_value_grad(x, noise_scale)
-                x, momentum = self.stochastic_continuous_greedy_step(x, gradient, p, momentum, (e+1)/step_coef)
-                self.sanity_check(x)
-                values_per_ad.append(value)
+                x, momentum = self.stochastic_continuous_greedy_step(x, gradient, p, momentum, epoch)
 
-            values.append(values_per_ad)
-
-        values = np.array(values).sum(axis=0)
-        return values
+            values.append(value)
+            self.sanity_check(x)
+        return np.array(values).sum()
 
 with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
     customer_to_phrase = pickle.load(inp)
     edge_weights = pickle.load(inp)
     avp = pickle.load(inp)
     phrase_price = pickle.load(inp)
+
 result = []
 num_advertiser, num_phrase = 1, 1000
-noise = 500
-step_coef = 0.15
+noise = 1000
+epoch = 20
+runs = 1
+
 scg = SCG_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
-for _ in range(10):
-    values = scg.train(200, noise_scale=noise, step_coef=step_coef)
-    result.append(values)
+for _ in tqdm(range(runs)):
+    iter_values = []
+    for train_iter in range(epoch):
+        try:
+            value = scg.train(train_iter, noise_scale=noise)
+            iter_values.append(value)
+        except Exception as e:
+            value = scg.train(train_iter, noise_scale=noise)
+            iter_values.append(value)
+    result.append(iter_values[:])
 result = np.array(result)
 
-
-import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(result.min(axis=0))
-plt.plot(result.mean(axis=0))
-plt.plot(result.max(axis=0))
-plt.show()
-
-np.save('Results/scg_yahoo_noise500_epoch200_run10.npy', result)
-
-
-
-
-
-
+print(result)
+np.save('Results/scg_yahoo_noise%d_epoch%d_run%d.npy' % (noise, epoch, runs), result)
 
 
 

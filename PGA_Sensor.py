@@ -6,6 +6,7 @@ import numpy as np
 mat = scipy.io.loadmat('water_imp1000.mat')
 import matplotlib.pyplot as plt
 
+
 class PGA_Sensor:
     def __init__(self, data, num_sensors, num_events, budget, t_inf) -> None:
         self.data = data
@@ -22,25 +23,35 @@ class PGA_Sensor:
         final_value = 0
         big_pi = 1
         #gradient = []
-        grad = []
         
-        for sensor in range(x.shape[0]):
-            final_value += (time[sensor]*((1 -(1-p))**x[sensor])*big_pi)
+        
+        #grad = [0] * self.num_sensors 
+        grad = []
+        iteration = 0
+        
+        for sensor in range(self.num_sensors):
+            
+            final_value += (time[sensor]*(1-(1-p)**x[sensor])*big_pi) 
             temp_grad = -time[sensor]*((1-p)**(x[sensor]))*np.log((1-p)**(x[sensor]))*big_pi
             grad.append(temp_grad)
-            
-            #grad = time[sensor]*x[sensor]*(1-(1-p))**(x[sensor] - 1)
-            #gradient.append(temp)
+          
+            for i in range(iteration):
+                temp_val = (-time[sensor]*(1-(1-p)**x[sensor])*(big_pi/((1-p)**x[i]))*(1-p)**x[i]*np.log(1-p))
+                grad[i] += temp_val 
+             
+            iteration += 1
             big_pi *= (1-p)**x[sensor] 
+            
+            #import pdb; pdb.set_trace()
             #gradient.append(grad) 
         return (self.t_inf - final_value), -1*np.array(grad) + noise_scale
     
     def setup_constraints(self):
         self.x = cp.Variable(shape=(self.num_sensors))
         self.p = cp.Parameter(shape=(self.num_sensors))
-        #constraints = [cp.sum(self.x) == self.budget]
+        constraints = [cp.sum(self.x) == self.budget]
 
-        constraints = [0 <= self.x , self.x <= self.budget]
+        #constraints = [0 <= self.x , self.x <= self.budget]
         objective = cp.Minimize(cp.sum_squares(self.x - self.p))
         self.prob = cp.Problem(objective, constraints)
 
@@ -71,16 +82,16 @@ class PGA_Sensor:
             values.append(values_per_event)
 
         values = np.array(values).sum(axis=0) / self.num_events
-        return values
+        return values 
 
 
-runs = 5
+runs = 1
 result = []
 noise = 100
-epoch = 400
+epoch = 100
 
 budget = 10
-data = mat['Z1'].toarray()[:100, :100]
+data = mat['Z1'].toarray()[:10, :100]
 t_inf = float(np.max(data))
 num_sensors, num_events = data.shape 
 pga = PGA_Sensor(data, num_sensors, num_events, budget, t_inf)
@@ -90,4 +101,8 @@ for _ in range(runs):
 result = np.array(result)
 
 plt.plot(result[0])
-plt.show() 
+plt.show()
+
+
+
+

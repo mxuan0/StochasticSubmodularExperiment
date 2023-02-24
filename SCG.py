@@ -62,23 +62,6 @@ class SCG_Yahoo(SCG):
 
         return influence, gradient
 
-
-class SCG_NQP(SCG):
-    def __init__(self, constraint_var, constraints, 
-                    H, A, h, u_bar) -> None:
-        super().__init__(constraint_var, constraints)
-        self.H, self.A, self.h, self.u_bar = H, A, h, u_bar
-        self.n = H.shape[1]
-        self.m = A.shape[0]
-        
-    def compute_value_grad(self, x, noise_scale=10):
-        noise = np.random.normal(scale=noise_scale, size=x.shape)
-        
-        value = 1/2*x @ self.H @ x.T + self.h.T @ x.T
-        gradient = self.H@x.T + self.h
-        
-        return value[0][0], gradient + noise
-
 '''advertiser_num = 10
 phrase_num = 1001
 weight_shape = (advertiser_num, phrase_num)
@@ -94,25 +77,25 @@ pdb.set_trace()
 scg = SCG_Yahoo(x, constraints, edge_weights, customer_to_phrase, advertiser_weights)
 values = scg.stochastic_continuous_greedy(50, weight_shape)'''
 
-# n = 100
-# m = 50
-# b = 1
-# u_bar = np.ones((1,n))
-# H = np.random.uniform(-100, 0, (n, n))
-# A = np.random.uniform(0, 1, (m, n))
-# h = -1 * H.T @ u_bar.T
-# train_iter = 1000
+n = 100
+m = 50
+b = 1
+u_bar = np.ones((1,n))
+H = np.random.uniform(-100, 0, (n, n))
+A = np.random.uniform(0, 1, (m, n))
+h = -1 * H.T @ u_bar.T
+train_iter = 1000
 
-# x = cp.Variable(shape=(1,n))
-# constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
+x = cp.Variable(shape=(1,n))
+constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
 
-# scg = SCG_NQP(x, constraints, H, A, h, u_bar)
-# results = []
-# for i in tqdm(range(1)):
-#     value = scg.train(train_iter, (1,n))
-#     results.append(value)
+scg = SCG_NQP(x, constraints, H, A, h, u_bar)
+results = []
+for i in tqdm(range(1)):
+    value = scg.train(train_iter, (1,n))
+    results.append(value)
 
-# np.save('Results/SCG_NQP_iter1000_b1_0.npy', np.array(results))
+np.save('Results/SCG_NQP_iter1000_b1_0.npy', np.array(results))
 
 # import matplotlib.pyplot as plt
 # plt.figure()

@@ -11,12 +11,14 @@ class PGA_NQP:
 
         self.setup_constraints()
 
-    def compute_value_grad(self, x, noise_scale=2000):
+    def compute_value_grad(self, x, noise_scale=2000, clip_noise=True):
         noise = np.random.normal(scale=noise_scale, size=x.shape)
+        if clip_noise:
+            noise = noise.clip(-2*noise_scale, 2*noise_scale)
         
         value = 1/2*x.T @ self.H @ x + self.h.T @ x
         gradient = self.H@x + self.h
-        
+        self.grad_norm_acc += np.linalg.norm(gradient)
         return value[0][0], gradient + noise
 
     def setup_constraints(self):
@@ -38,44 +40,45 @@ class PGA_NQP:
         x_t = x + alpha * grad
         return self.project(x_t)
 
-    def train(self, epoch, alpha, initialization=None, noise_scale=2000):
+    def train(self, epoch, alpha, initialization=None, noise_scale=5000, var_step=False):
         x = np.random.randn(self.n, 1)
         if initialization is not None:
             x = initialization
-        x = self.project(x)    
+        x = self.project(x)
 
+        self.grad_norm_acc = 0
         values = []
         for i in range(epoch):
+            if var_step:
+                alpha = 2/np.sqrt(i+1)
             value, gradient = self.compute_value_grad(x, noise_scale)
             x = self.projected_gradient_ascent_step(x, gradient, alpha)
 
             values.append(value)
+
+        print(self.grad_norm_acc/epoch)
         return values 
 
-# n = 100
-# m = 50
-# b = 1
 
-# x = np.random.randn(n, 1)
+n = 100
+m = 50
+b = 1
 
-# u_bar = np.ones((n,1))
-# H = np.random.uniform(-50, 0, (n, n))
-# H = H + H.T
-# A = np.random.uniform(0, 1, (m, n))
-# h = -1 * H.T @ u_bar
+x = np.random.randn(n, 1)
 
-# alpha = 1e-4
-# train_iter = 20
-# run = 50
+u_bar = np.ones((n,1))
+H = np.random.uniform(-50, 0, (n, n))
+H = H + H.T
+A = np.random.uniform(0, 1, (m, n))
+h = -1 * H.T @ u_bar
 
-# results = []
-# for _ in tqdm(range(run)):
-#     scg = PGA_NQP(H, A, h, u_bar, b)
-#     values = scg.train(train_iter, alpha, x)
-#     results.append(values[:])
+alpha = 1e-4
+train_iter = 500
+run = 100
 
-# results = np.array(results)
-
+#
+# print(results)
+# np.save('Results/pga_nqp_noise5000_run500_epoch500.npy', results)
 # import matplotlib.pyplot as plt
 # plt.figure()
 # plt.plot(results.min(axis=0))

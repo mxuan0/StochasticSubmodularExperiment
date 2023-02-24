@@ -3,16 +3,15 @@ import cvxpy as cp
 import numpy as np
 import pdb
 from tqdm import tqdm
-
+from multiprocessing import Process
 from YahooAdUtility import influence_by_advertiser
 
+
 class SCGPP_Yahoo:
-    def __init__(self, u_bar, num_advertiser, num_phrase, edge_prob, c_to_ph,  batch_size0, batch_size) -> None:
+    def __init__(self, u_bar, num_advertiser, num_phrase, edge_prob, c_to_ph) -> None:
         self.u_bar = u_bar
         self.num_advertiser, self.num_phrase = num_advertiser, num_phrase
         self.edge_prob, self.c_to_ph = edge_prob, c_to_ph
-
-        self.batch_size0, self.batch_size = batch_size0, batch_size
 
         self.x_prev = np.zeros(self.num_phrase)
         self.setup_constraints()
@@ -23,16 +22,19 @@ class SCGPP_Yahoo:
 
     def compute_value_grad(self, x, step, noise_scale):
         if step == 0:
-            noise = np.random.normal(scale=noise_scale, size=(self.num_phrase, self.batch_size0))\
+            noise = np.random.normal(scale=noise_scale, size=(self.num_phrase, self.batch_size0)) \
                 .mean(axis=1)
 
-            influence, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph, use_hessian=True)
+            influence, gradient, hessian = influence_by_advertiser(x, self.edge_prob, self.c_to_ph, use_hessian=True)
             gradient = gradient + noise
         else:
             influence, _, hessian = influence_by_advertiser(x, self.edge_prob, self.c_to_ph, use_hessian=True)
-            gradient = self.grad_prev + hessian @ (x - self.x_prev)
+            gradient = self.grad_prev + \
+                       (hessian + np.random.normal(scale=noise_scale,
+                                                   size=(hessian.shape[0], hessian.shape[0], self.batch_size)) \
+                        .mean(axis=-1)) @ (x - self.x_prev)
 
-        return influence, gradient
+        return influence, gradient, hessian
 
     def setup_constraints(self):
         self.v = cp.Variable(shape=(self.num_phrase))
@@ -52,55 +54,63 @@ class SCGPP_Yahoo:
     def stochastic_continuous_greedy_step(self, x, grad, epoch):
         return x + 1 / epoch * self.project(grad)
 
-    def train(self, epoch, noise_scale=2000, step_coef=0.15):
+    def train(self, epoch, noise_scale=2000):
         values = []
+        self.batch_size0, self.batch_size = epoch, epoch
+
         for ad in range(self.num_advertiser):
             x = np.zeros(self.num_phrase)
 
-            values_per_ad = []
+            value = 0
+            hessian_acc = np.zeros((self.num_phrase, self.num_phrase))
             for e in tqdm(range(epoch)):
-                value, gradient = self.compute_value_grad(x, e, noise_scale)
-                x = self.stochastic_continuous_greedy_step(x, gradient, epoch) #(e+1)/step_coef)
-                self.sanity_check(x)
-                values_per_ad.append(value)
-
+                value, gradient, hessian = self.compute_value_grad(x, e, noise_scale)
+                x = self.stochastic_continuous_greedy_step(x, gradient, epoch)  # (e+1)/step_coef)
                 if e > 0:
                     self.x_prev = x
                 self.grad_prev = gradient
+                print(hessian)
+                hessian_acc += hessian
+            values.append(value)
+            print('norm', np.linalg.norm(hessian_acc / epoch), 'shape', hessian_acc.shape)
+        return np.array(values).sum()
 
-            values.append(values_per_ad)
 
-        values = np.array(values).sum(axis=0)
-        return values
+def run_SCGPP_Yahoo(process_sequence_num):
+    np.random.seed(process_sequence_num)
 
-# with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
-#     customer_to_phrase = pickle.load(inp)
-#     edge_weights = pickle.load(inp)
-#     avp = pickle.load(inp)
-#     phrase_price = pickle.load(inp)
-#
-# result = []
-# num_advertiser, num_phrase = 1, 1000
-# noise = 500
-# step_coef = 0.15
-# batch_size0 = 10
-# batch_size = 10
-#
-# scg = SCGPP_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase, batch_size0, batch_size)
-# for _ in range(1):
-#     values = scg.train(200, noise_scale=noise, step_coef=step_coef)
-#     result.append(values)
-# result = np.array(result)
-#
-#
-# import matplotlib.pyplot as plt
-# plt.figure()
-# plt.plot(result.min(axis=0))
-# plt.plot(result.mean(axis=0))
-# plt.plot(result.max(axis=0))
-# plt.show()
-# run = 50
-# train_iter = 20
+    with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
+        customer_to_phrase = pickle.load(inp)
+        edge_weights = pickle.load(inp)
+        avp = pickle.load(inp)
+
+    num_advertiser, num_phrase = 1, 1000
+
+    runs = 1
+    noise =3
+    epoch = 20
+    result = []
+
+    scgpp = SCGPP_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
+
+    for _ in tqdm(range(runs)):
+        iter_values = []
+        for train_iter in tqdm(range(epoch, epoch + 1)):
+            if (train_iter) % 1 == 0:
+                try:
+                    value = scgpp.train(train_iter, noise_scale=noise)
+                    iter_values.append(value)
+                except Exception as e:
+                    value = scgpp.train(train_iter, noise_scale=noise)
+                    iter_values.append(value)
+        result.append(iter_values[:])
+    result = np.array(result)
+    print(result)
+
+
+if __name__ == '__main__':
+    for num in range(1):
+        Process(target=run_SCGPP_Yahoo, args=(num,)).start()
 
 # for c in range(5, 51, 5):
 #     results = []

@@ -15,10 +15,10 @@ class SCGPP_NQP:
         self.setup_constraints()
 
     def sanity_check(self, x):
-        if not (x < self.u_bar).all():
+        if not (np.abs((x - self.u_bar)[x > self.u_bar]) < 1e-3).all():
             pdb.set_trace()
 
-        if not (self.A @ x < self.b).all():
+        if not (np.abs((self.A @ x - self.b)[self.A @ x > self.b]) < 1e-3).all():
             pdb.set_trace()
 
     def compute_value_grad(self, x, step, noise_scale):
@@ -28,7 +28,9 @@ class SCGPP_NQP:
 
             gradient = self.H @ x + self.h + noise
         else:
-            gradient = self.grad_prev + self.H @ (x - self.x_prev)
+            noise = np.random.normal(scale=noise_scale, size=(self.n, self.n, self.batch_size)) \
+                .mean(axis=2)
+            gradient = self.grad_prev + (self.H + noise) @ (x - self.x_prev)
 
         value = 1 / 2 * x.T @ self.H @ x + self.h.T @ x
         return value[0][0], gradient
@@ -51,24 +53,20 @@ class SCGPP_NQP:
     def stochastic_continuous_greedy_step(self, x, grad, epoch):
         return x + 1 / epoch * self.project(grad)
 
-    def train(self, epoch, noise_scale=2000, step_coef=0.15):
+    def train(self, epoch, noise_scale=2000):
         x = np.zeros(shape=(self.n, 1))
 
-        values = []
+        value = 0
         for e in range(epoch):
             # pdb.set_trace()
             value, grad = self.compute_value_grad(x, e, noise_scale)
-            x = self.stochastic_continuous_greedy_step(x, grad, epoch)#(e + 1) / step_coef)  # (e+c)/1)
+            x = self.stochastic_continuous_greedy_step(x, grad, epoch)#(e + 10) / step_coef)  # (e+c)/1)
             if e > 0:
                 self.x_prev = x
             self.grad_prev = grad
 
-            values.append(value)
-        # self.sanity_check(x)
-        return x, values
-
-
-
+        self.sanity_check(x)
+        return x, value
 
 n = 100
 m = 50
@@ -76,25 +74,34 @@ b = 1
 
 u_bar = np.ones((n, 1))
 H = np.random.uniform(-100, 0, (n, n))
+print(np.linalg.norm(H))
 A = np.random.uniform(0, 1, (m, n))
 h = -1 * H.T @ u_bar
 
-batch_size0 = 10
-batch_size = 10
-
-
 runs = 500
-noise = 5000
-epoch = 500
+noise = 100
+epoch = 5
+
+batch_size0 = epoch
+batch_size = epoch
+
 result = []
 scg = SCGPP_NQP(H, A, h, u_bar, b, batch_size0, batch_size)
 
 for _ in tqdm(range(runs)):
-    x, values = scg.train(epoch, noise_scale=noise, step_coef=0.1)
-    result.append(values)
+    x, value = scg.train(epoch, noise_scale=noise)
+    result.append(value)
 
-np.save('Results/scgpp_nqp_noise%d_epoch%d_run%d_fixedstep.npy' % (noise, epoch, runs), result)
+result = np.array(result)
+np.save('Results/scgpp_nqp_noise%d_epoch%d_run%d_box.npy' % (noise, epoch, runs), result)
 
+# import matplotlib.pyplot as plt
+# plt.figure()
+# plt.plot(result.min(axis=0))
+# plt.plot(result.max(axis=0))
+# plt.plot(result.mean(axis=0)[:])
+# #plt.plot(results.var(axis=0))
+# plt.show()
 
 # run = 50
 # train_iter = 20

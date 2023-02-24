@@ -15,7 +15,10 @@ class PGA_Yahoo:
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         infl, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
         #print(np.abs(gradient).max())
-        return infl, gradient + noise
+
+        # pdb.set_trace()
+        # gradient = np.ones_like(gradient) * 100
+        return infl, gradient+noise, gradient
 
     def setup_constraints(self):
         self.x = cp.Variable(shape=(self.num_phrase))
@@ -33,27 +36,29 @@ class PGA_Yahoo:
         return self.x.value
 
     def projected_gradient_ascent_step(self, x, grad, alpha):
-        x_t = x - alpha * grad
+        x_t = x + alpha * grad
         return self.project(x_t)
 
     def train(self, epoch, alpha, initialization=None, noise_scale=2000):
         values = []
         for ad in range(self.num_advertiser):
-            #x = np.random.randn(self.num_phrase)
-            x = np.zeros(self.num_phrase)+1e-5
+            x = np.random.randn(self.num_phrase)
+
             if initialization is not None:
                 x = initialization
-            x = self.project(x)    
-
+            # x = np.ones(self.num_phrase) * self.u_bar
+            pdb.set_trace()
+            x = self.project(x)
+            grad_acc = np.zeros_like(x)
             values_per_ad = []
             for i in tqdm(range(epoch)):
-                value, gradient = self.compute_value_grad(x, noise_scale)
+                value, gradient, clean_grad = self.compute_value_grad(x, noise_scale)
                 x = self.projected_gradient_ascent_step(x, gradient, alpha)
-
+                grad_acc += clean_grad
                 values_per_ad.append(value)
 
             values.append(values_per_ad)
-
+            print('norm', np.linalg.norm(grad_acc/epoch), 'shape', grad_acc.shape)
         values = np.array(values).sum(axis=0)
         return values 
 
@@ -65,16 +70,16 @@ with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
     phrase_price = pickle.load(inp)
 
 # define training parameters
-runs = 2
+runs = 1
 result = []
 num_advertiser, num_phrase = 1, 1000
-noise = 1000
-epoch = 500
+noise = 0.005
+epoch = 200
 
 pga = PGA_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
 for _ in range(runs):
-    values = pga.train(epoch, 1e-3, noise_scale=noise)
+    values = pga.train(epoch, 1e2, noise_scale=noise)
     result.append(values)
 result = np.array(result)
-
+print(result)
 np.save('Results/pga_yahoo_noise%d_epoch%d_run%d.npy' % (noise, epoch, runs), result)

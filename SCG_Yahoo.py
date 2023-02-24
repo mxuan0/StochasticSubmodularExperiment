@@ -3,6 +3,7 @@ import numpy as np
 import pdb, pickle
 from tqdm import tqdm
 from YahooAdUtility import total_influence, influence_by_advertiser
+from multiprocessing import Process
 
 class SCG_Yahoo:
     def __init__(self, u_bar, num_advertiser, num_phrase, edge_prob, c_to_ph) -> None:
@@ -15,7 +16,7 @@ class SCG_Yahoo:
         noise = np.random.normal(scale=noise_scale, size=x.shape)
         infl, gradient, _ = influence_by_advertiser(x, self.edge_prob, self.c_to_ph)
         #print(np.abs(gradient).max())
-        return infl, gradient + noise
+        return infl, gradient+noise , gradient
 
     def sanity_check(self, x):
         if not (np.abs((x - self.u_bar)[x > self.u_bar]) < 1e-5).all():
@@ -48,14 +49,17 @@ class SCG_Yahoo:
             momentum = np.zeros(self.num_phrase)
             x = np.zeros(self.num_phrase)
             value = 0
+            grad_acc = np.zeros_like(x)
             for e in range(epoch):
                 p = 4 / (e+8)**(2/3)
-                value, gradient = self.compute_value_grad(x, noise_scale)
+                value, gradient, clean_grad = self.compute_value_grad(x, noise_scale)
                 x, momentum = self.stochastic_continuous_greedy_step(x, gradient, p, momentum, epoch)
-
+                grad_acc += clean_grad
             values.append(value)
             self.sanity_check(x)
+            print('norm', np.linalg.norm(grad_acc / epoch), 'shape', grad_acc.shape)
         return np.array(values).sum()
+
 
 with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
     customer_to_phrase = pickle.load(inp)
@@ -65,14 +69,14 @@ with open('data/YahooAdBiddingData/ADdata.pkl', 'rb') as inp:
 
 result = []
 num_advertiser, num_phrase = 1, 1000
-noise = 1000
+noise = 0.005
 epoch = 20
 runs = 1
 
 scg = SCG_Yahoo(avp, num_advertiser, num_phrase, edge_weights, customer_to_phrase)
 for _ in tqdm(range(runs)):
     iter_values = []
-    for train_iter in range(epoch):
+    for train_iter in range(epoch, epoch+1):
         try:
             value = scg.train(train_iter, noise_scale=noise)
             iter_values.append(value)
@@ -83,7 +87,7 @@ for _ in tqdm(range(runs)):
 result = np.array(result)
 
 print(result)
-np.save('Results/scg_yahoo_noise%d_epoch%d_run%d.npy' % (noise, epoch, runs), result)
+# np.save('Results/scg_yahoo_noise%d_epoch%d_run%d.npy' % (noise, epoch, runs), result)
 
 
 

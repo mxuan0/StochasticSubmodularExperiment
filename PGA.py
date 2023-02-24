@@ -53,7 +53,7 @@ class PGA_NQP(PGA):
         gradient = self.H@x.T + self.h
         
         return value[0][0], gradient + noise
-'''
+
 n = 100
 m = 50
 b = 1
@@ -61,7 +61,7 @@ u_bar = np.ones((1,n))
 H = np.random.uniform(-100, 0, (n, n))
 A = np.random.uniform(0, 1, (m, n))
 h = -1 * H.T @ u_bar.T
-train_iter = 50
+train_iter = 1000
 
 x = cp.Variable(shape=(1,n))
 constraints = [0 <= x, x <= u_bar, A @ x.T <= b]
@@ -72,4 +72,4 @@ values = pga.projected_gradient_ascent(train_iter, (1,n), 1e-5)
 import matplotlib.pyplot as plt
 plt.figure()
 plt.plot(values)
-plt.show()'''
+plt.show()

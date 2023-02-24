@@ -10,6 +10,7 @@ def influence_on_customer(x, customer_id, edge_prob, connected_phrases, use_hess
     influence_ = 1
     # time1 = time.time()
     log_prob = np.zeros((x.shape[0], 1))
+    # pdb.set_trace()
     for phrase in connected_phrases:
         influence_ *= (1 - edge_prob[(phrase,customer_id)]) ** x[phrase]
         log_prob[phrase] = np.log(1 - edge_prob[(phrase, customer_id)])
